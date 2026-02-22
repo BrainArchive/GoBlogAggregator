@@ -8,6 +8,7 @@ import (
 
 	"github.com/brainarchive/goblogaggregator/internal/database"
 	"github.com/brainarchive/goblogaggregator/internal/rss"
+	"github.com/google/uuid"
 )
 
 func handlerAgg(s *state, cmd command) error {
@@ -41,7 +42,7 @@ func scrapeFeeds(s *state) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%v", *rssFeed)
+
 	fmt.Println()
 	fmt.Println("====================")
 	fmt.Printf("%v\n", latestFeed.Name)
@@ -53,5 +54,42 @@ func scrapeFeeds(s *state) error {
 	}
 	fmt.Printf("%v\n", user.Name)
 	fmt.Println("====================")
+	for _, rssItem := range rssFeed.Channel.Item {
+		timePublished, err := time.Parse(time.RFC1123Z, rssItem.PubDate)
+		if err != nil {
+			fmt.Printf("error parsing time %v\n", err)
+		}
+		_, err = s.db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+			Title:     rssItem.Title,
+			Url:       rssItem.Link,
+			Description: sql.NullString{
+				String: rssItem.Description,
+				Valid:  true,
+			},
+			PublishedAt: sql.NullTime{
+				Time:  timePublished,
+				Valid: true,
+			},
+			FeedID: latestFeed.ID,
+		})
+		if err != nil {
+			fmt.Printf("error creating post: %v\n", err)
+		}
+	}
+	fmt.Println()
+	fmt.Println("====================")
+	fmt.Printf("%v\n", latestFeed.Name)
+	fmt.Printf("%v\n", latestFeed.Url)
+	fmt.Printf("%v\n", latestFeed.UserID)
+	_, err = s.db.GetUserFromId(context.Background(), latestFeed.UserID)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%v\n", user.Name)
+	fmt.Println("====================")
+
 	return nil
 }
