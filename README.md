@@ -1,6 +1,7 @@
 # Gator
 - still needs some cleaning. Will do so at a later date.
 - it's called gator.
+gator
 # Requirements 
 - PostgresSQL
 - if on linux WSL, 
